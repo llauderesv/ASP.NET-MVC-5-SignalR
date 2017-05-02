@@ -1,0 +1,115 @@
+﻿@{
+    ViewBag.Title = "Chat";
+}
+<h2>Chat</h2>
+<div class="container">
+    <div class="row">
+        <div class="col-md-6">
+            <h3>Enter the group name that you want to join</h3>
+            <input type="text" name="group_name" class="form-control" />
+            <input id="btn_join_group" type="button" name="btn_join_group" value="Join group" class="btn btn-block btn-primary" />
+        </div>
+    </div>
+
+    <div id="chat_layout" style="display: none">
+        <div class="row">
+            <div class="col-md-6">
+                <input type="text" id="displayname" class="form-control" />
+                <input type="button" id="btn_submit" value="Submit name" class="btn btn-block" />
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-6">
+                <input type="text" id="message" class="form-control" />
+                <input type="button" id="sendmessage" value="Send" class="btn btn-block" />
+                <ul id="discussion"></ul>
+            </div>
+        </div>
+    </div>
+
+
+
+
+
+
+
+
+</div>
+@section scripts {
+    <script src="~/Scripts/jquery.signalR-2.2.1.min.js"></script>
+    <script src="~/signalr/hubs"></script>
+    <script type="text/javascript">
+        $(function () {
+
+            // Reference the auto-generated proxy for the hub.
+            var chat = $.connection.chatHub;
+
+            var name = null, groupName = null;
+
+            $('#btn_submit').click(function () {
+                name = $('#displayname').val()
+                $('#displayname').val('')
+            })
+
+            // Create a function that the hub can call back to display messages.
+            chat.client.addMessageToGroup = function (name, message, groupName) {
+
+                // Add the message to the page.
+                $('#discussion').append('<li><strong>' + htmlEncode(name)
+                    + '</strong>: ' + htmlEncode(message) + ' from ' + groupName +'</li>');
+            };
+
+            chat.client.addGroup = function (callback, m) {
+                $('#discussion li').remove()
+                console.log("DONE!")
+                $('#chat_layout').fadeIn()
+                for (var i = 0; i < m.length; i++) {
+                    if (m[i].Name === callback) {
+                        $('#discussion').append('<li><strong>' + htmlEncode(m[i].User)
+                            + '</strong>: ' + htmlEncode(m[i].Message) + ' from ' + m[i].Name + '</li>');
+                    }
+                }
+            }
+                   
+            //chat.client.addNewMessageToGroup = function (name, message, groupName) {
+            //    $('#discussion').append('<li><strong>' + htmlEncode(name)
+            //    + '</strong>: ' + htmlEncode(message) + ' from ' + groupName + '</li>');
+            //};
+
+            // Start the connection.
+            $.connection.hub.start()
+            .done(function () {
+                $('#btn_join_group').click(function () {
+                    $('#btn_join_group').val('Loading...');
+                    chat.server.joinGroup($('input[name="group_name"]').val()).done(function () {
+                        $('#btn_join_group').val('Join group');
+                    });
+                })
+
+
+
+                $('#sendmessage').click(function () {
+
+
+                    // Call the Send method on the hub.
+                    chat.server.send(name, $('#message').val(), $('input[name="group_name"]').val());
+                    //chat.server.sendToCaller('Vincent Llauderes', 'IT WORKS');
+                    $('#message').val('').focus();
+
+
+                });
+                            
+
+
+            });
+
+        });
+
+
+        // This optional function html-encodes messages for display in the page.
+        function htmlEncode(value) {
+            var encodedValue = $('<div />').text(value).html();
+            return encodedValue;
+        }
+    </script>
+}
